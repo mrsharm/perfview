@@ -867,6 +867,18 @@ namespace Microsoft.Diagnostics.Tracing.Analysis
                     }
                 };
 
+                source.Clr.GCDynamic += delegate (GCDynamicTraceData data)
+                {
+
+
+                };
+
+                source.Clr.Hello += delegate ((int, int) data)
+                {
+                    Console.WriteLine("HELLO!");
+                    // USE THE DATA.
+                };
+
                 source.Clr.GCGlobalHeapHistory += delegate (GCGlobalHeapHistoryTraceData data)
                 {
                     var stats = currentManagedProcess(data);
@@ -4613,7 +4625,7 @@ namespace Microsoft.Diagnostics.Tracing.Analysis.GC
         {
             if (IsServerGCUsed == 1)
             {
-                Debug.Assert(HeapCount > 1);
+                //Debug.Assert(HeapCount > 1);
 
                 if (serverGCThreads.Count < HeapCount)
                 {

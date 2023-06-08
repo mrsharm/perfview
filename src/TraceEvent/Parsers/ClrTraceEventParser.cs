@@ -3,6 +3,7 @@ using FastSerialization;
 using Microsoft.Diagnostics.Tracing.Etlx;
 using Microsoft.Diagnostics.Tracing.Utilities;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -844,7 +845,7 @@ namespace Microsoft.Diagnostics.Tracing.Parsers
                 source.UnregisterEventTemplate(value, 38, ProviderGuid);
             }
         }
-        public event Action<GCDynamicTraceData> GCDynamicTraceData 
+        public event Action<GCDynamicTraceData> GCDynamic 
         {
             add
             {
@@ -856,6 +857,23 @@ namespace Microsoft.Diagnostics.Tracing.Parsers
                 source.UnregisterEventTemplate(value, 39, ProviderGuid);
             }
         }
+        public event Action<(int, int)> Hello
+        {
+            add
+            {
+                this.GCDynamic += (GCDynamicTraceData d) =>
+                {
+                    if (string.CompareOrdinal(d.Name, "Hello") == 0)
+                    {
+                        int first = BitConverter.ToInt32(d.Data, 0);
+                        int second = BitConverter.ToInt32(d.Data, 4);
+                        value((first, second));
+                    }
+                };
+            }
+            remove { }
+        }
+
         public event Action<IOThreadTraceData> IOThreadCreationStart
         {
             add
@@ -7965,15 +7983,6 @@ namespace Microsoft.Diagnostics.Tracing.Parsers.Clr
 
     public sealed class GCDynamicTraceData : TraceEvent
     {
-        /*
-                    <template tid = "GCDynamicEvent" >
-                < data name="Name" inType="win:UnicodeString" />
-                <data name = "DataSize" inType="win:UInt32" />
-                <data name = "Data" inType="win:Binary" length="DataSize" />
-                <data name = "ClrInstanceID" inType="win:UInt16" />
-            </template>
-            */
-
         internal GCDynamicTraceData(Action<GCDynamicTraceData> action, int eventID, int task, string taskName, Guid taskGuid, int opcode, string opcodeName, Guid providerGuid, string providerName)
             : base(eventID, task, taskName, taskGuid, opcode, opcodeName, providerGuid, providerName)
         {
@@ -7984,6 +7993,11 @@ namespace Microsoft.Diagnostics.Tracing.Parsers.Clr
         public Int32 DataSize { get { return GetInt32At(SkipUnicodeString(0)); } }
         public byte[] Data { get { return GetByteArrayAt(offset: SkipUnicodeString(0) + 4, DataSize); } }
         public int ClrInstanceID { get { return GetInt16At(SkipUnicodeString(0) + 4 + DataSize); } }
+
+        protected internal override void Dispatch()
+        {
+            Action(this);
+        }
 
         protected internal override Delegate Target
         {
