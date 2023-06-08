@@ -869,8 +869,9 @@ namespace Microsoft.Diagnostics.Tracing.Analysis
 
                 source.Clr.GCDynamic += delegate (GCDynamicTraceData data)
                 {
-
-
+                    StringBuilder sb = new StringBuilder();
+                    sb = data.ToXml(sb);
+                    var x = sb.ToString();
                 };
 
                 source.Clr.Hello += delegate ((int, int) data)

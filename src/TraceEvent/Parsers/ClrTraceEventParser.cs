@@ -8036,6 +8036,17 @@ namespace Microsoft.Diagnostics.Tracing.Parsers.Clr
             }
         }
 
+        public override StringBuilder ToXml(StringBuilder sb)
+        {
+            Prefix(sb);
+            XmlAttrib(sb, "Name", Name);
+            XmlAttrib(sb, "DataSize", DataSize);
+            XmlAttrib(sb, "Data", string.Join(",", Data));
+            XmlAttrib(sb, "ClrInstanceID", ClrInstanceID);
+            sb.Append("</Event>");
+            return sb;
+        }
+
         private event Action<GCDynamicTraceData> Action;
     }
 
