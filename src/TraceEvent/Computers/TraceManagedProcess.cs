@@ -4629,6 +4629,8 @@ namespace Microsoft.Diagnostics.Tracing.Analysis.GC
 
         internal static void ProcessGlobalHistory(TraceLoadedDotNetRuntime proc, GCGlobalHeapHistoryTraceData data)
         {
+            int numHeaps = data.NumHeaps;
+
             // We detected whether we are using Server GC now.
             proc.GC.m_stats.IsServerGCUsed = ((data.NumHeaps > 1) ? 1 : 0);
             if (proc.GC.m_stats.HeapCount == -1)
@@ -4655,7 +4657,7 @@ namespace Microsoft.Diagnostics.Tracing.Analysis.GC
                     HasCondemnReasons0 = data.HasCondemnReasons0,
                     HasCondemnReasons1 = data.HasCondemnReasons1,
                 };
-                _event.SetHeapCount(proc.GC.m_stats.HeapCount);
+                _event.SetHeapCount(data.NumHeaps);
             }
         }
 

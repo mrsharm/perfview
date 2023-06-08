@@ -844,6 +844,18 @@ namespace Microsoft.Diagnostics.Tracing.Parsers
                 source.UnregisterEventTemplate(value, 38, ProviderGuid);
             }
         }
+        public event Action<GCDynamicTraceData> GCDynamicTraceData 
+        {
+            add
+            {
+                // action, eventid, taskid, taskName, taskGuid, opcode, opcodeName, providerGuid, providerName
+                RegisterTemplate(new GCDynamicTraceData(value, 39, 1, "GC", GCTaskGuid, 40, "GCDynamicData", ProviderGuid, ProviderName));
+            }
+            remove
+            {
+                source.UnregisterEventTemplate(value, 39, ProviderGuid);
+            }
+        }
         public event Action<IOThreadTraceData> IOThreadCreationStart
         {
             add
@@ -2178,13 +2190,17 @@ namespace Microsoft.Diagnostics.Tracing.Parsers
         {                  // action, eventid, taskid, taskName, taskGuid, opcode, opcodeName, providerGuid, providerName
             return new ContentionLockCreatedTraceData(action, 90, 8, "Contention", ContentionTaskGuid, 11, "LockCreated", ProviderGuid, ProviderName);
         }
+        static private GCDynamicTraceData GCDyanmicTemplate(Action<GCDynamicTraceData> action)
+        {                  // action, eventid, taskid, taskName, taskGuid, opcode, opcodeName, providerGuid, providerName
+            return new GCDynamicTraceData(action, 39, 1, "GC", GCTaskGuid, 41, "GCDynamicData", ProviderGuid, ProviderName);
+        }
 
         static private volatile TraceEvent[] s_templates;
         protected internal override void EnumerateTemplates(Func<string, string, EventFilterResponse> eventsToObserve, Action<TraceEvent> callback)
         {
             if (s_templates == null)
             {
-                var templates = new TraceEvent[145];
+                var templates = new TraceEvent[146];
                 templates[0] = new GCStartTraceData(null, 1, 1, "GC", GCTaskGuid, 1, "Start", ProviderGuid, ProviderName);
                 templates[1] = new GCEndTraceData(null, 2, 1, "GC", GCTaskGuid, 2, "Stop", ProviderGuid, ProviderName);
                 templates[2] = new GCNoUserDataTraceData(null, 3, 1, "GC", GCTaskGuid, 132, "RestartEEStop", ProviderGuid, ProviderName);
@@ -2339,6 +2355,7 @@ namespace Microsoft.Diagnostics.Tracing.Parsers
                 templates[142] = GCLOHCompactTemplate(null);
                 templates[143] = GCFitBucketInfoTemplate(null);
                 templates[144] = ContentionLockCreatedTemplate(null);
+                templates[145] = GCDyanmicTemplate(null); 
 
                 s_templates = templates;
             }
@@ -7944,6 +7961,68 @@ namespace Microsoft.Diagnostics.Tracing.Parsers.Clr
         private TraceEvent m_data;
         private int m_baseOffset;
         #endregion
+    }
+
+    public sealed class GCDynamicTraceData : TraceEvent
+    {
+        /*
+                    <template tid = "GCDynamicEvent" >
+                < data name="Name" inType="win:UnicodeString" />
+                <data name = "DataSize" inType="win:UInt32" />
+                <data name = "Data" inType="win:Binary" length="DataSize" />
+                <data name = "ClrInstanceID" inType="win:UInt16" />
+            </template>
+            */
+
+        internal GCDynamicTraceData(Action<GCDynamicTraceData> action, int eventID, int task, string taskName, Guid taskGuid, int opcode, string opcodeName, Guid providerGuid, string providerName)
+            : base(eventID, task, taskName, taskGuid, opcode, opcodeName, providerGuid, providerName)
+        {
+            Action = action;
+        }
+
+        public string Name { get { return GetUnicodeStringAt(0); } }
+        public Int32 DataSize { get { return GetInt32At(SkipUnicodeString(0)); } }
+        public byte[] Data { get { return GetByteArrayAt(offset: SkipUnicodeString(0) + 4, DataSize); } }
+        public int ClrInstanceID { get { return GetInt16At(SkipUnicodeString(0) + 4 + DataSize); } }
+
+        protected internal override Delegate Target
+        {
+            get { return Action; }
+            set { Action = (Action<GCDynamicTraceData>)value; }
+        }
+
+        public override string[] PayloadNames
+        {
+            get
+            {
+                if (payloadNames == null)
+                {
+                    payloadNames = new string[] { "Name", "DataSize", "Data", "ClrInstanceID" };
+                }
+
+                return payloadNames;
+            }
+        }
+
+        public override object PayloadValue(int index)
+        {
+            switch (index)
+            {
+                case 0:
+                    return Name;
+                case 1:
+                    return DataSize;
+                case 2:
+                    return Data;
+                case 3:
+                    return ClrInstanceID;
+                default:
+                    Debug.Assert(false, "Bad field index");
+                    return null;
+            }
+        }
+
+        private event Action<GCDynamicTraceData> Action;
     }
 
     public sealed class GCBulkRootStaticVarTraceData : TraceEvent
