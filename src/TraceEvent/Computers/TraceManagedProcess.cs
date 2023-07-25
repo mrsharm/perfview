@@ -2567,6 +2567,7 @@ namespace Microsoft.Diagnostics.Tracing.Analysis.GC
             AllocRateMBSec = GetAllocRateMBSec(details.GCs, this);
             HeapSizePeakMB = GetHeapSizePeakMB(details.GCs, this);
             UserAllocated[(int)Gens.Gen0] = GetUserAllocated(details.GCs, this, Gens.Gen0);
+            UserAllocated[(int)Gens.GenPinObj] = GetUserAllocated(details.GCs, this, Gens.GenPinObj);
             UserAllocated[(int)Gens.GenLargeObj] = GetUserAllocated(details.GCs, this, Gens.GenLargeObj);
             HeapSizeBeforeMB = GetHeapSizeBeforeMB(details.GCs, this);
             for (int gen = (int)Gens.Gen0; gen <= (int)Gens.GenLargeObj; gen++)
@@ -2790,7 +2791,7 @@ namespace Microsoft.Diagnostics.Tracing.Analysis.GC
         /// </summary>
         internal static double GetUserAllocated(List<TraceGC> GCs, TraceGC gc, Gens gen)
         {
-            Debug.Assert((gen == Gens.Gen0) || (gen == Gens.GenLargeObj));
+            Debug.Assert((gen == Gens.Gen0) || (gen == Gens.GenLargeObj) || (gen == Gens.GenPinObj));
 
             if ((gc.Type == GCType.BackgroundGC) && (gen == Gens.Gen0))
             {
